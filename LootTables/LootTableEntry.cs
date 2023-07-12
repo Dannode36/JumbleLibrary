@@ -1,16 +1,14 @@
 ﻿namespace JumbleLibrary.LootTables
 {
-    public class WeightedTableEntry<T>
+    public class LootTableEntry<T>
     {
         public T item;
         public int weight;
-        public int rarity;
 
-        public WeightedTableEntry(T item, int weight, int rarity = 0)
+        public LootTableEntry(T item, int weight)
         {
             this.item = item;
             this.weight = weight;
-            this.rarity = rarity;
         }
     }
 }
