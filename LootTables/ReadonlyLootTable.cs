@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace JumbleLibrary.LootTables
@@ -7,16 +8,25 @@ namespace JumbleLibrary.LootTables
     {
         public readonly string TableID;
         private readonly List<LootTableEntry<T>> table;
-        private int totalWeight;
+        private readonly int totalWeight;
+        private readonly uint tableBits = 0;
+        private readonly Random random;
 
         public ReadonlyLootTable(string tableID, IEnumerable<LootTableEntry<T>> newTable)
         {
             TableID = tableID;
             table = (List<LootTableEntry<T>>)newTable;
+            random = new Random();
 
             foreach (var item in table)
             {
                 totalWeight += item.weight;
+            }
+            foreach (var entry in table)
+            {
+                tableBits <<= 1;
+                tableBits ^= 1;
+                tableBits <<= entry.weight - 1;
             }
         }
 
@@ -35,6 +45,20 @@ namespace JumbleLibrary.LootTables
             }
 
             throw new LootTableException("Loot table failed to calculate a returned item", TableID);
+        }
+
+        public T? BinaryLookup()
+        {
+            uint tableBits = this.tableBits;
+            uint randomMask = 0xFFFFFFFF << random.Next(0, totalWeight); //Shift randomly to create a "cutting" bit mask
+            
+            tableBits &= randomMask; //Fuckery ensues...
+
+            tableBits -= ((tableBits >> 1) & 0x55555555); //Next 3 lines find the total number of set bits in the freshly trimmed table bits
+            tableBits = (tableBits & 0x33333333) + ((tableBits >> 2) & 0x33333333); 
+            uint index = (((tableBits + (tableBits >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+
+            return table[(int)index - 1].item; //Subtracting 1 just makes it work 
         }
 
         void ILootTable<T>.Add(LootTableEntry<T> entry)
